@@ -8,7 +8,9 @@ type Matrix = [Vector, Vector, Vector]
 function VectorPreview(props: { vector: Vector }) {
   return (
     <div className="grid grid-cols-3 grid-rows-3 gap-1">
-      {props.vector.map((v, i) => <div key={i}>{v.toLocaleString()}</div>)}
+      {props.vector.map((v, i) => (
+        <div key={i}>{v.toLocaleString()}</div>
+      ))}
     </div>
   )
 }
@@ -16,16 +18,27 @@ function VectorPreview(props: { vector: Vector }) {
 function MatrixPreview(props: { matrix: Matrix }) {
   return (
     <div className="grid grid-cols-3 grid-rows-3 gap-1">
-      {props.matrix.flatMap(
-        (v) => v.map((v) => v),
-      ).map((v, i) => <div key={i}>{v.toLocaleString()}</div>)}
+      {props.matrix
+        .flatMap((v) => v.map((v) => v))
+        .map((v, i) => (
+          <div key={i}>{v.toLocaleString()}</div>
+        ))}
     </div>
   )
 }
 
 export default function SketchLoader() {
+  const [vectorA, setVectorA] = useState<Vector>()
+  const [vectorB, setVectorB] = useState<Vector>()
   const [matrixA, setMatrixA] = useState<Matrix>()
   const [matrixB, setMatrixB] = useState<Matrix>()
+  const [rotation, setRotation] = useState<number>(0)
+  const [translationX, setTranslationX] = useState<number>(0)
+  const [translationY, setTranslationY] = useState<number>(0)
+  const [scaleX, setScaleX] = useState<number>(1)
+  const [scaleY, setScaleY] = useState<number>(1)
+  const [shearX, setShearX] = useState<number>(0)
+  const [shearY, setShearY] = useState<number>(0)
 
   const sketch = useMemo(() => {
     const sketch: Sketch = (p5) => {
@@ -120,11 +133,12 @@ export default function SketchLoader() {
       p5.mouseDragged = () => {
         const vec = makeVector(p5.mouseX, p5.mouseY)
         drawVector(imgA, vec)
+        setVectorA(vec)
 
         // Transformacje dla imgA
-        const translationMatrixA = makeTranslation(30, 50)
-        const rotationMatrixA = makeRotation(45)
-        const scaleMatrixA = makeScale(1.5, 1.5)
+        const translationMatrixA = makeTranslation(translationX, translationY)
+        const rotationMatrixA = makeRotation(rotation)
+        const scaleMatrixA = makeScale(scaleX, scaleY)
         let combinedMatrixA = multiplyMatrices(
           translationMatrixA,
           rotationMatrixA,
@@ -135,14 +149,15 @@ export default function SketchLoader() {
         setMatrixA(combinedMatrixA)
 
         // Transformacje dla imgB
-        const translationMatrixB = makeTranslation(50, 30)
-        const rotationMatrixB = makeRotation(-45)
-        const scaleMatrixB = makeScale(1.5, 1.5)
+        const translationMatrixB = makeTranslation(translationX, translationY)
+        const rotationMatrixB = makeRotation(rotation)
+        const scaleMatrixB = makeScale(scaleX, scaleY)
         let combinedMatrixB = multiplyMatrices(scaleMatrixB, translationMatrixB)
         combinedMatrixB = multiplyMatrices(combinedMatrixB, rotationMatrixB)
         const transformedVecB = multiplyMatrixVector(combinedMatrixB, vec)
         drawVector(imgB, transformedVecB)
         setMatrixB(combinedMatrixB)
+        setVectorB(transformedVecB)
       }
 
       p5.setup = () => {
@@ -173,7 +188,7 @@ export default function SketchLoader() {
           makeIdentity: makeIdentity(),
           makeTranslation: makeTranslation(73, 21),
           makeScale: makeScale(3, 5),
-          makeRotation: makeRotation(60),
+          makeRotation: makeRotation(rotation),
           makeShear: makeShear(1, 0),
         })
       }
@@ -191,22 +206,104 @@ export default function SketchLoader() {
     }
 
     return sketch
-  }, [])
+  }, [rotation, scaleX, scaleY, translationX, translationY])
 
   return (
     <div className="bg-slate-800 text-white">
-      <div className="grid grid-cols-2 place-content-center h-screen">
+      <div className="grid grid-cols-2 place-items-center h-screen">
         <ReactP5Wrapper sketch={sketch} />
-        <div>
+        <div className="w-2/3">
+          <p>Vector A</p>
+          {vectorA && <VectorPreview vector={vectorA} />}
+          <p>Vector B</p>
+          {vectorB && <VectorPreview vector={vectorB} />}
           <p>Matrix A</p>
-          {matrixA && (
-            <MatrixPreview matrix={matrixA} />
-          )}
+          {matrixA && <MatrixPreview matrix={matrixA} />}
           <p>Matrix B</p>
-          {matrixB && (
-            <MatrixPreview matrix={matrixB} />
-          )}
-          
+          {matrixB && <MatrixPreview matrix={matrixB} />}
+          <div>
+            <p>Rotation = {rotation.toLocaleString()}</p>
+            <input
+              type="range"
+              min="0"
+              max="360"
+              value={rotation}
+              onChange={(e) => setRotation(Number(e.target.value))}
+            />
+          </div>
+          <div>
+            <p>Translation = {translationX.toLocaleString()}, {translationY.toLocaleString()}</p>
+            <label>
+              translationX
+              <input
+                type="range"
+                min="-100"
+                max="100"
+                value={translationX}
+                onChange={(e) => setTranslationX(Number(e.target.value))}
+              />
+            </label>
+            <label>
+              translationY
+              <input
+                type="range"
+                min="-100"
+                max="100"
+                value={translationY}
+                onChange={(e) => setTranslationY(Number(e.target.value))}
+              />
+            </label>
+          </div>
+          <div>
+            <p>Scale = {scaleX.toLocaleString()}, {scaleY.toLocaleString()}</p>
+            <label>
+              scaleX
+              <input
+                type="range"
+                min="0"
+                max="5"
+                step="0.1"
+                value={scaleX}
+                onChange={(e) => setScaleX(Number(e.target.value))}
+              />
+            </label>
+            <label>
+              scaleY
+              <input
+                type="range"
+                min="0"
+                max="5"
+                step="0.1"
+                value={scaleY}
+                onChange={(e) => setScaleY(Number(e.target.value))}
+              />
+            </label>
+          </div>
+          <div>
+            <p>Shear (not implemented yet)</p>
+            <label>
+              shearX
+              <input
+                type="range"
+                min="-1"
+                max="1"
+                step="0.1"
+                value={shearX}
+                onChange={(e) => setShearX(Number(e.target.value))}
+              />
+            </label>
+            <label>
+              shearY
+              <input
+                type="range"
+                min="-1"
+                max="1"
+                step="0.1"
+                value={shearY}
+                onChange={(e) => setShearY(Number(e.target.value))}
+              />
+            </label>
+          </div>
         </div>
       </div>
     </div>
